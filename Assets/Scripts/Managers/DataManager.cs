@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using UnityEngine;
 
@@ -13,11 +14,11 @@ public interface ILoader<Key, Value>
 
 public class DataManager
 {
-    public Dictionary<int, Stat> StatDict = new Dictionary<int, Stat>();
+    public Dictionary<int, Data.Stat> StatDict = new Dictionary<int, Data.Stat>();
 
     public void Init()
     {
-        StatDict = LoadJson<StatData,int,Stat>("StatData").MakeDict();
+        StatDict = LoadJson<Data.StatData,int, Data.Stat>("StatData").MakeDict();
     }
 
     Loader LoadJson<Loader, Key,Value>(string path) where Loader : ILoader<Key,Value>

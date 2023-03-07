@@ -5,13 +5,26 @@ using UnityEngine.AI;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField]
-    float _speed = 10.0f;
-
+    PlayerStat _stat;
     Vector3 _destPos;
 
+    Texture2D _attackIcon;
+    Texture2D _handIcon;
+
+    enum CursorType
+    {
+        None,
+        Attack,
+        Hand,
+    }
+
+    CursorType _cursorType = CursorType.None;
     void Start()
     {
+        _attackIcon = Managers.Resource.Load<Texture2D>("Textures/Cursor/Attack");
+        _handIcon = Managers.Resource.Load<Texture2D>("Textures/Cursor/Hand");
+        _stat = gameObject.GetComponent<PlayerStat>();
+
         Managers.Input.MouseAction -= OnMouseClicked;
         Managers.Input.MouseAction += OnMouseClicked;
     } 
@@ -21,7 +34,7 @@ public class PlayerController : MonoBehaviour
         die,
         Moving,
         Idle,
-
+        Skill,
     }
     
     PlayerState _state = PlayerState.Idle;
@@ -41,7 +54,7 @@ public class PlayerController : MonoBehaviour
         else
         {
             NavMeshAgent nma = gameObject.GetOrAddComponent<NavMeshAgent>();
-            float moveDist = Mathf.Clamp(_speed * Time.deltaTime, 0, dir.magnitude);
+            float moveDist = Mathf.Clamp(_stat.MoveSpeed * Time.deltaTime, 0, dir.magnitude);
             //nma.CalculatePath
             nma.Move(dir.normalized * moveDist);
 
@@ -57,7 +70,7 @@ public class PlayerController : MonoBehaviour
         }
 
         Animator anim = GetComponent<Animator>();
-        anim.SetFloat("speed", _speed);
+        anim.SetFloat("speed", _stat.MoveSpeed);
     }
     
 
@@ -69,7 +82,9 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        switch(_state)
+        UpdateMouseCursor();
+
+        switch (_state)
         {
             case PlayerState.die:
                 UpdateDie();
@@ -83,6 +98,35 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void UpdateMouseCursor()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit, 100.0f, _mask))
+        {
+            if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
+            {   
+                if(_cursorType != CursorType.Attack)
+                {
+                    Cursor.SetCursor(_attackIcon, new Vector2(_attackIcon.width * 0.5f, 0.0f), CursorMode.Auto);
+                    _cursorType = CursorType.Attack;
+                }
+                
+            }
+            else
+            {
+                if (_cursorType != CursorType.Hand)
+                {
+                    Cursor.SetCursor(_handIcon, new Vector2(_handIcon.width * 0.5f, 0.0f), CursorMode.Auto);
+                    _cursorType = CursorType.Hand;
+                }
+                    
+            }
+        }
+    }
+
+    int _mask = (1 << (int)Define.Layer.Monster) | (1 << (int)Define.Layer.Ground);
 
     void OnMouseClicked(Define.MouseEvent evt)
     {
@@ -95,10 +139,19 @@ public class PlayerController : MonoBehaviour
         //Debug.DrawRay(Camera.main.transform.position, ray.direction * 100.0f, Color.red, 1.0f);
 
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 100.0f, LayerMask.GetMask("Wall")))
+        if (Physics.Raycast(ray, out hit, 100.0f, _mask))
         {
             _destPos = hit.point;
             _state = PlayerState.Moving;
+
+            if(hit.collider.gameObject.layer == (int)Define.Layer.Monster)
+            {
+                Debug.Log("Monster");
+            }
+            else
+            {
+                Debug.Log("Ground");
+            }
         }
     }
 }
